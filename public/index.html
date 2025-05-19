@@ -19,17 +19,32 @@
       display: block;
     }
     #authScreen {
+      background-color: #000;
       display: flex;
       justify-content: center;
       align-items: center;
+      height: 100vh;
+      flex-direction: column;
     }
     #authScreen input {
-      padding: 10px;
+      padding: 14px 20px;
       font-size: 18px;
-      border-radius: 8px;
+      border-radius: 12px;
       border: none;
       outline: none;
       text-align: center;
+      width: 80%;
+      max-width: 300px;
+      background-color: #1c1c1e;
+      color: white;
+      box-shadow: 0 0 15px rgba(255,255,255,0.05);
+      transition: all 0.2s ease-in-out;
+    }
+    #authScreen input::placeholder {
+      color: #aaa;
+    }
+    #authScreen input:focus {
+      box-shadow: 0 0 10px rgba(255,255,255,0.2);
     }
     #messages {
       padding: 10px;
@@ -122,7 +137,6 @@
     let mediaRecorder;
     let audioChunks = [];
 
-    // Проверка пароля
     passwordInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         if (passwordInput.value === '2525') {
@@ -152,7 +166,7 @@
       localStorage.setItem('chatMessages', JSON.stringify(messages));
     }
 
-function renderMessage(msg) {
+    function renderMessage(msg) {
       const msgWrapper = document.createElement('div');
       msgWrapper.className = 'message';
 
