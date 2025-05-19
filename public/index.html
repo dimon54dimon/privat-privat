@@ -11,6 +11,26 @@
       font-family: sans-serif;
       color: white;
     }
+    #authScreen, #chatScreen {
+      display: none;
+      height: 100vh;
+    }
+    #authScreen.active, #chatScreen.active {
+      display: block;
+    }
+    #authScreen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #authScreen input {
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      text-align: center;
+    }
     #messages {
       padding: 10px;
       overflow-y: auto;
@@ -20,6 +40,7 @@
     }
     .message {
       margin: 5px 0;
+      position: relative;
     }
     #bottomBar {
       position: fixed;
@@ -50,103 +71,194 @@
       border-radius: 10px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
+    audio {
+      margin-top: 5px;
+    }
+    .time {
+      font-size: 10px;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+    .close-btn {
+      color: red;
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div id="messages"></div>
 
-  <div id="bottomBar">
-    <input id="messageInput" type="text" placeholder="Сообщение..." />
-    <button id="sendButton">Отправить</button>
-    <input type="file" id="imageInput" accept="image/*" style="display: none;" />
-    <button id="imageButton">Фото</button>
+  <!-- Экран пароля -->
+  <div id="authScreen" class="active">
+    <input type="password" id="passwordInput" placeholder="Введите код доступа" />
+  </div>
+
+  <!-- Экран чата -->
+  <div id="chatScreen">
+    <div id="messages"></div>
+
+    <div id="bottomBar">
+      <input id="messageInput" type="text" placeholder="Сообщение..." />
+      <button id="sendButton">Отправить</button>
+      <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+      <button id="imageButton">Фото</button>
+      <button id="recordButton">Голос</button>
+    </div>
   </div>
 
   <script>
+    const passwordInput = document.getElementById('passwordInput');
+    const authScreen = document.getElementById('authScreen');
+    const chatScreen = document.getElementById('chatScreen');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const imageInput = document.getElementById('imageInput');
     const imageButton = document.getElementById('imageButton');
+    const recordButton = document.getElementById('recordButton');
     const messagesContainer = document.getElementById('messages');
 
-    // Загрузка сообщений при старте
+    let mediaRecorder;
+    let audioChunks = [];
+
+    // Проверка пароля
+    passwordInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (passwordInput.value === '2525') {
+          authScreen.classList.remove('active');
+          chatScreen.classList.add('active');
+        } else {
+          passwordInput.value = '';
+          passwordInput.placeholder = 'Неверный код';
+        }
+      }
+    });
+
     window.addEventListener('DOMContentLoaded', () => {
       const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
       messages.forEach(renderMessage);
     });
 
-    // Сохранение сообщения в localStorage
     function saveMessage(msg) {
       let messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
       messages.push(msg);
       localStorage.setItem('chatMessages', JSON.stringify(messages));
     }
 
-    // Удаление сообщения из localStorage
     function deleteMessage(toDelete) {
       let messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
-      messages = messages.filter(msg => msg.content !== toDelete.content);
+      messages = messages.filter(msg => msg.content !== toDelete.content || msg.type !== toDelete.type);
       localStorage.setItem('chatMessages', JSON.stringify(messages));
     }
 
-    // Рендер одного сообщения
-    function renderMessage(msg) {
+function renderMessage(msg) {
       const msgWrapper = document.createElement('div');
       msgWrapper.className = 'message';
 
-      if (msg.type === 'text') {
-        msgWrapper.textContent = msg.content;
-        msgWrapper.style.background = '#333';
-        msgWrapper.style.padding = '10px';
-        msgWrapper.style.borderRadius = '10px';
-        msgWrapper.style.maxWidth = '70%';
-      } else if (msg.type === 'image') {
-        const img = document.createElement('img');
-        img.src = msg.content;
-        msgWrapper.appendChild(img);
-      }
+      const time = document.createElement('div');
+      time.className = 'time';
+      time.textContent = msg.time;
 
-      // Удаление по нажатию
-      msgWrapper.addEventListener('click', () => {
+      const closeBtn = document.createElement('span');
+      closeBtn.textContent = '✖';
+      closeBtn.className = 'close-btn';
+      closeBtn.addEventListener('click', () => {
         if (confirm('Удалить сообщение?')) {
           msgWrapper.remove();
           deleteMessage(msg);
         }
       });
 
+      if (msg.type === 'text') {
+        msgWrapper.textContent = msg.content;
+        msgWrapper.style.background = '#333';
+        msgWrapper.style.color = 'white';
+        msgWrapper.style.padding = '10px';
+        msgWrapper.style.borderRadius = '10px';
+        msgWrapper.style.maxWidth = '70%';
+        msgWrapper.appendChild(time);
+      } else if (msg.type === 'image') {
+        const img = document.createElement('img');
+        img.src = msg.content;
+        msgWrapper.appendChild(img);
+        msgWrapper.appendChild(time);
+      } else if (msg.type === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = msg.content;
+        msgWrapper.appendChild(audio);
+        msgWrapper.appendChild(time);
+      }
+
+      msgWrapper.appendChild(closeBtn);
       messagesContainer.appendChild(msgWrapper);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // Отправка текста
     sendButton.addEventListener('click', () => {
       const text = messageInput.value.trim();
       if (!text) return;
-
-      const msg = { type: 'text', content: text };
+      const msg = {
+        type: 'text',
+        content: text,
+        time: new Date().toLocaleTimeString()
+      };
       renderMessage(msg);
       saveMessage(msg);
       messageInput.value = '';
     });
 
-    // Открытие выбора фото
     imageButton.addEventListener('click', () => {
       imageInput.click();
     });
 
-    // Загрузка изображения
     imageInput.addEventListener('change', () => {
       const file = imageInput.files[0];
       if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const msg = {
+          type: 'image',
+          content: reader.result,
+          time: new Date().toLocaleTimeString()
+        };
+        renderMessage(msg);
+        saveMessage(msg);
+      };
+      reader.readAsDataURL(file);
+    });
 
-const reader = new FileReader();
-      reader.onload = () => {
-        const msg = { type: 'image', content: reader.result };
-        renderMessage(msg);
-        saveMessage(msg);
-      };
-      reader.readAsDataURL(file);
-    });
-  </script>
+    recordButton.addEventListener('click', async () => {
+      if (!mediaRecorder) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          audioChunks = [];
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const msg = {
+            type: 'audio',
+            content: audioUrl,
+            time: new Date().toLocaleTimeString()
+          };
+          renderMessage(msg);
+          saveMessage(msg);
+        };
+      }
+
+      if (recordButton.textContent === 'Голос') {
+        audioChunks = [];
+        mediaRecorder.start();
+        recordButton.textContent = 'Стоп';
+      } else {
+        mediaRecorder.stop();
+        recordButton.textContent = 'Голос';
+      }
+    });
+  </script>
 </body>
 </html>
