@@ -1,10 +1,76 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Чат Приват</title>
+  <meta charset="UTF-8" />
+  <title>Приватный чат</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    #chat, #error { display: none; margin-top: 20px; }
+    #messages { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; background: #fff; }
+    .message { margin-bottom: 10px; }
+    .message button { margin-left: 10px; }
+  </style>
 </head>
 <body>
-  <h1>Привет, ты на секретной странице!</h1>
+  <h2>Введите пароль для доступа</h2>
+  <input type="password" id="passwordInput" placeholder="Введите пароль" />
+  <button onclick="checkPassword()">Войти</button>
+  <p id="error" style="color: red;">Неверный пароль!</p>
+
+  <div id="chat">
+    <h2>Чат</h2>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Ваше сообщение" />
+    <button onclick="sendMessage()">Отправить</button>
+  </div>
+
+  <script>
+    const correctPassword = "2525";
+
+    function checkPassword() {
+      const input = document.getElementById("passwordInput").value;
+      if (input === correctPassword) {
+        document.querySelector("h2").style.display = "none";
+        document.getElementById("passwordInput").style.display = "none";
+        document.querySelector("button").style.display = "none";
+        document.getElementById("error").style.display = "none";
+        document.getElementById("chat").style.display = "block";
+        loadMessages();
+      } else {
+        document.getElementById("error").style.display = "block";
+      }
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const text = input.value.trim();
+      if (text) {
+        const messages = JSON.parse(localStorage.getItem("chatMessages") || "[]");
+        messages.push(text);
+        localStorage.setItem("chatMessages", JSON.stringify(messages));
+        input.value = "";
+        loadMessages();
+      }
+    }
+
+    function deleteMessage(index) {
+      const messages = JSON.parse(localStorage.getItem("chatMessages") || "[]");
+      messages.splice(index, 1);
+      localStorage.setItem("chatMessages", JSON.stringify(messages));
+      loadMessages();
+    }
+
+    function loadMessages() {
+      const messages = JSON.parse(localStorage.getItem("chatMessages") || "[]");
+      const container = document.getElementById("messages");
+      container.innerHTML = "";
+      messages.forEach((msg, index) => {
+        const div = document.createElement("div");
+        div.className = "message";
+        div.innerHTML = ${msg} <button onclick="deleteMessage(${index})">Удалить</button>;
+        container.appendChild(div);
+      });
+    }
+  </script>
 </body>
 </html>
