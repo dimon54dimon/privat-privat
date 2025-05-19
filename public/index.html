@@ -1,6 +1,5 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,114 +7,146 @@
   <style>
     body {
       margin: 0;
+      background-color: #000;
       font-family: sans-serif;
-      background-color: #121212;
-      color: #fff;
+      color: white;
     }
-    #login {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #121212;
-    }
-    #chat {
-      display: none;
-      flex-direction: column;
-      height: 100vh;
-      background-color: #1e1e1e;
-    }
-    .messages {
-      flex-grow: 1;
+    #messages {
       padding: 10px;
       overflow-y: auto;
+      height: calc(100vh - 80px);
+      display: flex;
+      flex-direction: column;
     }
     .message {
-      background: #2a2a2a;
+      margin: 5px 0;
+    }
+    #bottomBar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #111;
       padding: 10px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      position: relative;
-    }
-    .message span {
-      position: absolute;
-      top: 5px;
-      right: 10px;
-      color: red;
-      cursor: pointer;
-    }
-    .input-area {
       display: flex;
-      border-top: 1px solid #333;
-      padding: 10px;
+      gap: 5px;
     }
-    .input-area input {
+    #messageInput {
       flex: 1;
       padding: 10px;
+      border-radius: 8px;
       border: none;
-      border-radius: 5px;
+      outline: none;
     }
-    .input-area button {
-      background: #0095f6;
+    button {
+      padding: 10px;
+      background: #333;
       color: white;
       border: none;
-      padding: 10px;
-      margin-left: 10px;
-      border-radius: 5px;
+      border-radius: 8px;
+    }
+    img {
+      max-width: 60%;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
-  <div id="login">
-    <h2>Введите код доступа</h2>
-    <input type="password" id="password" placeholder="Введите код" />
-    <button onclick="checkPassword()">Войти</button>
-  </div>
-  <div id="chat">
-    <div class="messages" id="messages"></div>
-    <div class="input-area">
-      <input type="text" id="messageInput" placeholder="Сообщение..." />
-      <button onclick="sendMessage()">Отправить</button>
-    </div>
-  </div>
-  <script>
-    const correctPassword = "2525";
-    const login = document.getElementById("login");
-    const chat = document.getElementById("chat");
-    const messages = document.getElementById("messages");
-    const input = document.getElementById("messageInput");
+  <div id="messages"></div>
 
-    function checkPassword() {
-      const entered = document.getElementById("password").value;
-      if (entered === correctPassword) {
-        login.style.display = "none";
-        chat.style.display = "flex";
-        loadMessages();
-      } else {
-        alert("Неверный код");
-      }
+  <div id="bottomBar">
+    <input id="messageInput" type="text" placeholder="Сообщение..." />
+    <button id="sendButton">Отправить</button>
+    <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+    <button id="imageButton">Фото</button>
+  </div>
+
+  <script>
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const imageInput = document.getElementById('imageInput');
+    const imageButton = document.getElementById('imageButton');
+    const messagesContainer = document.getElementById('messages');
+
+    // Загрузка сообщений при старте
+    window.addEventListener('DOMContentLoaded', () => {
+      const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+      messages.forEach(renderMessage);
+    });
+
+    // Сохранение сообщения в localStorage
+    function saveMessage(msg) {
+      let messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+      messages.push(msg);
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
     }
 
-    function sendMessage() {
-      const text = input.value.trim();
+    // Удаление сообщения из localStorage
+    function deleteMessage(toDelete) {
+      let messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+      messages = messages.filter(msg => msg.content !== toDelete.content);
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
+
+    // Рендер одного сообщения
+    function renderMessage(msg) {
+      const msgWrapper = document.createElement('div');
+      msgWrapper.className = 'message';
+
+      if (msg.type === 'text') {
+        msgWrapper.textContent = msg.content;
+        msgWrapper.style.background = '#333';
+        msgWrapper.style.padding = '10px';
+        msgWrapper.style.borderRadius = '10px';
+        msgWrapper.style.maxWidth = '70%';
+      } else if (msg.type === 'image') {
+        const img = document.createElement('img');
+        img.src = msg.content;
+        msgWrapper.appendChild(img);
+      }
+
+      // Удаление по нажатию
+      msgWrapper.addEventListener('click', () => {
+        if (confirm('Удалить сообщение?')) {
+          msgWrapper.remove();
+          deleteMessage(msg);
+        }
+      });
+
+      messagesContainer.appendChild(msgWrapper);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Отправка текста
+    sendButton.addEventListener('click', () => {
+      const text = messageInput.value.trim();
       if (!text) return;
 
-      const div = document.createElement("div");
-      div.className = "message";
-      div.innerHTML = text + '<span onclick="this.parentElement.remove()">&times;</span>';
-      messages.appendChild(div);
-      input.value = "";
-      saveMessages();
-    }
+      const msg = { type: 'text', content: text };
+      renderMessage(msg);
+      saveMessage(msg);
+      messageInput.value = '';
+    });
 
-    function saveMessages() {
-      localStorage.setItem("secretMessages", messages.innerHTML);
-    }
+    // Открытие выбора фото
+    imageButton.addEventListener('click', () => {
+      imageInput.click();
+    });
 
-    function loadMessages() {
-      messages.innerHTML = localStorage.getItem("secretMessages") || "";
-    }
-  </script>
+    // Загрузка изображения
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (!file) return;
+
+const reader = new FileReader();
+      reader.onload = () => {
+        const msg = { type: 'image', content: reader.result };
+        renderMessage(msg);
+        saveMessage(msg);
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
 </body>
 </html>
